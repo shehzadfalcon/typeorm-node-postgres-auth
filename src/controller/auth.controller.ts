@@ -4,8 +4,10 @@ import {User} from "../entity/user.entity";
 import bcryptjs from 'bcryptjs';
 import {sign, verify} from 'jsonwebtoken';
 import {Token} from "../entity/token.entity";
+import LoggerService from "../config/logger"
 
 export const Register = async (req: Request, res: Response) => {
+    try {
     const {name, email, password} = req.body;
 
     const user = await getRepository(User).save({
@@ -15,9 +17,13 @@ export const Register = async (req: Request, res: Response) => {
     });
 
     res.send(user);
+}  catch (error)  {
+    LoggerService.LoggerHandler(500, 'An error occurred', res, { error });
+  }
 }
 
 export const Login = async (req: Request, res: Response) => {
+    try{
     const {email, password} = req.body;
 
     const user = await getRepository(User).findOne({email});
@@ -59,76 +65,13 @@ export const Login = async (req: Request, res: Response) => {
     res.send({
         token
     });
-}
-
-export const AuthenticatedUser = async (req: Request, res: Response) => {
-    try {
-        const accessToken = req.header('Authorization')?.split(" ")[1] || "";
-
-        const payload: any = verify(accessToken, "access_secret");
-
-        if (!payload) {
-            return res.status(401).send({
-                message: 'unauthenticated'
-            });
-        }
-
-        const user = await getRepository(User).findOne(payload.id);
-
-        if (!user) {
-            return res.status(401).send({
-                message: 'unauthenticated'
-            });
-        }
-
-        const {password, ...data} = user;
-
-        res.send(data);
-    } catch (e) {
-        return res.status(401).send({
-            message: 'unauthenticated'
-        });
-    }
-}
-
-export const Refresh = async (req: Request, res: Response) => {
-    try {
-        const refreshToken = req.cookies['refreshToken'];
-
-        const payload: any = verify(refreshToken, "refresh_secret");
-
-        if (!payload) {
-            return res.status(401).send({
-                message: 'unauthenticated'
-            });
-        }
-
-        const dbToken = await getRepository(Token).findOne({
-            user_id: payload.id,
-            expired_at: MoreThanOrEqual(new Date())
-        });
-
-        if (!dbToken) {
-            return res.status(401).send({
-                message: 'unauthenticated'
-            });
-        }
-
-        const token = sign({
-            id: payload.id
-        }, "access_secret", {expiresIn: '30s'});
-
-        res.send({
-            token
-        })
-    } catch (e) {
-        return res.status(401).send({
-            message: 'unauthenticated'
-        });
-    }
+} catch (error)  {
+    LoggerService.LoggerHandler(500, 'An error occurred', res, { error });
+  }
 }
 
 export const Logout = async (req: Request, res: Response) => {
+    try{
     const refreshToken = req.cookies['refreshToken'];
 
     await getRepository(Token).delete({token: refreshToken});
@@ -138,4 +81,8 @@ export const Logout = async (req: Request, res: Response) => {
     res.send({
         message: 'success'
     });
+}
+catch (error)  {
+    LoggerService.LoggerHandler(500, 'An error occurred', res, { error });
+  }
 }
